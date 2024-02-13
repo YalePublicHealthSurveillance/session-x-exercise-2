@@ -34,9 +34,7 @@ a2 <- readRDS('./Data/65p_diarrhea_manhattan.rds') %>%
 
 ## Plot the time series for Children under 5
 ```{r}
- ggplot(a2, aes(x=date, y=count)) +
-  theme_classic() +
-  geom_line()
+
 ```
 
 ## Harmonic regression
@@ -50,20 +48,7 @@ Make sure to sort by date, then create an index, and harmonic terms
 ```{r}
 
 a3 <- a2 %>%
-  arrange(date) %>%
-  mutate( t=row_number(),
-          sin1= sin(2*pi*t/365),
-          cos1= cos(2*pi*t/365),
-
-          sin2= sin(2*pi*t*2/365),
-          cos2= cos(2*pi*t*2/365),
-
-          sin3= sin(2*pi*t*3/365),
-          cos3= cos(2*pi*t*3/365),
-          
-          
-          )
-
+  
 
 ```
 
@@ -72,12 +57,12 @@ Fit your Poisson regression model and negative binomial--which will you choose?
 
 ```{r}
 
-mod1 <- glm(count~sin1 +cos1+ sin2 +cos2 +sin3+cos3+t +day_of_week, data=a3, family='poisson')
+mod1 <- glm(XX~YY, data=a3, family='poisson')
 
 summary(mod1)
 
 
-mod2 <- glm.nb(count~sin1 +cos1+ sin2 +cos2 +sin3+cos3+t + day_of_week, data=a3)
+mod2 <- glm.nb(XX~YY, data=a3)
 
 summary(mod2)
 ```
@@ -106,92 +91,52 @@ ds1 <-  readRDS('Data/reported_cases.rds')
 ```
 
 
-Plot the delay distribution (what proportion of cases were reported after day 1,2,3,4...)
+Calculate the delay distribution (what proportion of cases were reported after day 1,2,3,4...), and plot the delay distribution and the cumlative delays (what proportion had been reported by day 1, day 2, day 3)
 ```{r}
-proportion_reporting <- ds1  %>%  
-  mutate(delay = as.numeric(date_of_report -date_of_diagnosis )) %>% 
-  group_by(delay) %>%
-  summarize(N=n()) %>%
-  ungroup() %>%
-  tidyr::complete(delay=1:30) %>%
-  mutate(prop= N/sum(N, na.rm=T),
-         prop = if_else(is.na(prop),0,prop) ,
-         cum_prop=cumsum(prop))
 
-ggplot(test1, aes(x=delay, y=prop)) +
-  geom_line()+
-  theme_classic()+
-    ggtitle('Proportion Reported by delay day')
-
-
-ggplot(test1, aes(x=delay, y=cum_prop)) +
-  geom_line()+
-  theme_classic()+
-  ggtitle('Cumulative Proportion Reported by delay day')
 
 ```
 
 Create a time series based on date of diagnosis
 ```{r}
-ts_date_dx <- ds1 %>% 
-  group_by(date_of_diagnosis) %>%
-  summarize(N_date_dx = n() ) %>%
-  rename(date=date_of_diagnosis)
+
 ```
 
 Create a time series based on date of report
 ```{r}
-ts_date_report <- ds1 %>% 
-  group_by(date_of_report) %>%
-  summarize(N_date_report = n() ) %>%
-  rename(date=date_of_report)
+
 ```
 
+Plot these two time series
 ```{r}
-ggplot(ts_date_dx) +
-  geom_line(aes(x=date, y=N_date_dx)) +
-  geom_line(data=ts_date_report,aes(x=date, y=N_date_report),color='red') +
- theme_classic() 
-  
 
 ```
+
 
 ## Correct the observed data based on date of diagnosis using the delay distribution
 
 ```{r}
-delay_correct <- ts_date_dx %>%
-  mutate(current_date=max(date),
-          delay = as.numeric(current_date - date) ) %>%
-  left_join(proportion_reporting, by='delay')%>%
-  mutate(corrected_cases= N_date_dx/cum_prop)
+
 ```
 
 #Plot the reported and corrected cases
 
 ```{r}
-ggplot(delay_correct, aes(x=date, y=N_date_dx)) +
-  geom_line()+
-  geom_line( aes(x=date, y=corrected_cases), color='red') +
-  theme_classic()
 
 ```
 compare to actual complete cases (not yet fully observed)
 
 ```{r}
+#The actual full dataset that is observed retrospectively
  full_ds <- readRDS( 'Data/reported_cases_full_final.rds') %>%
   group_by(date_of_diagnosis) %>%
   summarize(N_full=n())
 
-ggplot(delay_correct, aes(x=date, y=N_date_dx)) +
-  geom_line()+
-  geom_line( aes(x=date, y=corrected_cases), color='red') +
-  geom_line(data=full_ds,aes(x=date_of_diagnosis, y=N_full), color='blue') +
-  theme_classic() +
-  xlim(as.Date('2019-03-01'),as.Date('2019-03-20'))+
-  ylim(0,20)
+
 
 ```
 
+## Reporting triangle approach
 
 ## Generate a reporting triangle
 
